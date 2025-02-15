@@ -5,7 +5,6 @@ RepoRocket is a universal launcher for GitHub applications with Steam Cloud inte
 ## Features
 - **Search GitHub Repositories**: Easily search for GitHub repositories directly from the application.
 - **Download and Manage Apps**: Download and manage GitHub applications with a user-friendly interface.
-- **Steam Cloud Integration**: Sync save files with Steam Cloud for seamless data backup and synchronization.
 - **Cross-Platform Support**: Available for both Windows and Linux.
 
 ## Setup
@@ -68,4 +67,4 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-![logo](https://github.com/user-attachments/assets/beea4963-f851-4f3f-999f-12923c76f625)
+![logo](https://github.com/user-attachments/assets/e933c40b-98d0-41d7-bba3-cffcfa00da33)
