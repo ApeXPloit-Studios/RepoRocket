@@ -1,58 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ApeXPloit Studios</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="img/logo.ico">
-    <meta name="description" content="ApeXPloit Studios - Creators of innovative applications and games.">
-    <meta name="keywords" content="ApeXPloit Studios, RepoRocket, applications, games, development">
-    <meta name="author" content="ApeXPloit Studios Team">
+  <meta charset="UTF-8">
+  <title>RepoRocket API Help</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <img src="img/logo.png" alt="ApeXPloit Studios Logo" class="logo">
-            <h1>ApeXPloit Studios</h1>
-            <p class="subtitle">Creators of innovative applications and games.</p>
-        </header>
-
-        <section id="home" class="section">
-            <h2>Welcome to ApeXPloit Studios</h2>
-            <p>We are dedicated to creating innovative applications and games that enhance user experiences and provide endless entertainment.</p>
-        </section>
-
-        <section id="projects" class="section">
-            <h2>Our Projects</h2>
-            <div class="project">
-                <h3>RepoRocket</h3>
-                <p>A modern application launcher designed to streamline the process of downloading, managing, and launching apps and games directly from GitHub repositories.</p>
-                <div style="max-width: 650px; margin: 0 auto;">
-                    <iframe
-                        src="https://store.steampowered.com/widget/3513390/"
-                        frameborder="0"
-                        width="646"
-                        height="190">
-                    </iframe>
-                </div>
-            </div>
-            <!-- Add more projects here -->
-        </section>
-
-        <section id="about" class="section">
-            <h2>About Us</h2>
-            <p>ApeXPloit Studios is a team of passionate developers and designers committed to creating high-quality applications and games. Our mission is to innovate and provide exceptional user experiences.</p>
-        </section>
-
-        <footer class="footer">
-            <div class="social-media">
-                <a href="https://store.steampowered.com/app/3513390/RepoRocket/" target="_blank" aria-label="Steam Store">Steam Store</a>
-                <a href="https://www.youtube.com/@apexploit" target="_blank" aria-label="YouTube Channel">YouTube Channel</a>
-                <a href="https://discord.gg/u7fxK5DaAp" target="_blank" aria-label="Discord Server">Discord Server</a>
-            </div>
-            <p>© 2025 ApeXPloit Studios. All Rights Reserved</p>
-        </footer>
-    </div>
+  <header>
+    <h1>RepoRocket API Help</h1>
+  </header>
+  <nav>
+    <ul>
+      <li><a href="#api">API Overview</a></li>
+      <li><a href="#plugins">Plugins</a></li>
+      <li><a href="#themes">Themes</a></li>
+      <li><a href="#custom">Custom Functions</a></li>
+    </ul>
+  </nav>
+  <section id="api">
+    <h2>API Overview</h2>
+    <p>This API provides functions to create and manage projects in RepoRocket.
+    You can create themes, plugins, and custom workflows. Functions include project creation,
+    theme editing and exporting, as well as plugin initialization and integration.</p>
+  </section>
+  <section id="plugins">
+    <h2>Plugins</h2>
+    <p>Plugins are kept in the /plugins folder. Each plugin must have a base.py file
+    that defines an <code>init_plugin(main_app)</code> function. This function is called by RepoRocket during startup, 
+    allowing your plugin to interact with the application – for example, adding menu items, status messages, or custom tools.</p>
+    <p>For detailed instructions on writing plugins, see our plugin development guide below.</p>
+    <article>
+      <h3>Plugin Development Guide</h3>
+      <ol>
+        <li>Create a folder under <code>/f:/Projects/RepoRocket/plugins</code> for your plugin.</li>
+        <li>Add a <code>base.py</code> file that defines <code>init_plugin(main_app)</code>.</li>
+        <li>Inside <code>init_plugin</code>, register new actions, status messages, or extend UI components.</li>
+        <li>Test your plugin by restarting RepoRocket.</li>
+      </ol>
+    </article>
+  </section>
+  <section id="themes">
+    <h2>Themes</h2>
+    <p>The Theme API allows you to customize UI elements of RepoRocket and RRCreator.
+    In our theme editor, for each UI element you can click a button to bring up a color wheel,
+    type in a hex code if desired, and confirm to set that color. This is integrated via custom functions that are accessible to themes.</p>
+  </section>
+  <section id="custom">
+    <h2>Custom Functions</h2>
+    <p>You can extend RepoRocket and RRCreator via custom functions.
+    For example, the newly added <code>select_color</code> function (used in the theme editor)
+    opens a dialog with a color wheel and hex code input.
+    Use these functions in your own plugins or theme customization routines.</p>
+  </section>
+  <footer>
+    <p>&copy; RepoRocket 2023</p>
+  </footer>
+  <script src="script.js"></script>
 </body>
 </html>
