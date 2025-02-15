@@ -1,0 +1,9 @@
+PyQt6
+requests
+watchdog
+pyinstaller
+python-steamgriddb
+qdarkstyle
+PyQt6-WebEngine
+pyyaml
+PyGame

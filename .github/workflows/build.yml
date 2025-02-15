@@ -1,0 +1,85 @@
+name: Build and Upload RepoRocket Artifacts
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write  # Ensure the GITHUB_TOKEN has write permissions for contents
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Print working directory and list files
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing files:"
+          ls -R
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Windows build script
+        run: scripts/compile_windows.bat
+
+      - name: Zip Windows build
+        run: |
+          if (Test-Path -Path dist) {
+            cd dist
+            Compress-Archive -Path * -DestinationPath ../RepoRocket-Windows.zip
+          } else {
+            Write-Error "dist directory not found"
+          }
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RepoRocket-Windows
+          path: RepoRocket-Windows.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print working directory and list files
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing files:"
+          ls -R
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Linux dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential zip
+
+      - name: Run Linux build script
+        run: bash scripts/compile_linux.sh
+
+      - name: Zip Linux build
+        run: |
+          if [ -d "dist" ]; then
+            cd dist
+            zip -r ../RepoRocket-Linux.zip *
+          else
+            echo "dist directory not found" >&2
+            exit 1
+          fi
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RepoRocket-Linux
+          path: RepoRocket-Linux.zip
