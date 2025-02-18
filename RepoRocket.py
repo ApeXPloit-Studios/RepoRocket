@@ -377,9 +377,11 @@ class RepoRocket(QMainWindow):
     def download_file(self, url, repo_name):
         response = requests.get(url, stream=True)
         file_name = url.split("/")[-1]
-        app_folder = os.path.join("applications", repo_name)
-        os.makedirs(app_folder, exist_ok=True)
-        save_path = os.path.join(app_folder, file_name)
+        # Create double folder: applications/app_name/app_name
+        parent_folder = os.path.join("applications", repo_name)
+        child_folder = os.path.join(parent_folder, repo_name)
+        os.makedirs(child_folder, exist_ok=True)
+        save_path = os.path.join(child_folder, file_name)
         
         total_size = int(response.headers.get('content-length', 0))
         self.progress_bar.setMaximum(total_size)
@@ -399,13 +401,13 @@ class RepoRocket(QMainWindow):
             self.progress_bar.setVisible(True)
             self.unzip_and_clean(save_path, repo_name)
             self.progress_bar.setVisible(False)
-            self.repo_description.setText(f"Downloaded and extracted to {app_folder}")
+            self.repo_description.setText(f"Downloaded and extracted to {child_folder}")
             self.prompt_for_executable(repo_name)
         elif file_name.endswith(".html"):
-            self.repo_description.setText(f"Downloaded HTML file to {app_folder}")
+            self.repo_description.setText(f"Downloaded HTML file to {child_folder}")
             self.display_html_content(save_path)
         else:
-            self.repo_description.setText(f"Downloaded to {app_folder}")
+            self.repo_description.setText(f"Downloaded to {child_folder}")
             self.prompt_for_executable(repo_name)
 
     def display_html_content(self, html_path):
@@ -415,7 +417,8 @@ class RepoRocket(QMainWindow):
         self.main_content.setCurrentWidget(self.html_viewer)
 
     def unzip_and_clean(self, zip_path, repo_name):
-        extract_path = os.path.join("applications", repo_name)
+        # Extract into the double folder: applications/app_name/app_name
+        extract_path = os.path.join("applications", repo_name, repo_name)
         os.makedirs(extract_path, exist_ok=True)
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             total_files = len(zip_ref.infolist())
@@ -462,7 +465,8 @@ class RepoRocket(QMainWindow):
                 border: 1px solid #5e5e5e;
             }
         """)
-        app_folder = os.path.join("applications", repo_name)
+        # Use the double folder for scanning executables.
+        app_folder = os.path.join("applications", repo_name, repo_name)
         for root, dirs, files in os.walk(app_folder):
             for file in files:
                 if file.endswith((".exe", ".bat", ".sh", ".appimage", ".app")):
@@ -925,7 +929,7 @@ class RepoRocket(QMainWindow):
 
     def sync_cloud_save(self, app_name):
         cloud_save_location = self.config.get(app_name, {}).get('cloud_save_location')
-        if cloud_save_location:
+        if (cloud_save_location):
             save_folder = os.path.join("saves", app_name)
             os.makedirs(save_folder, exist_ok=True)
             for item in os.listdir(cloud_save_location):
