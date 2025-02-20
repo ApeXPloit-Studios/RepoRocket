@@ -1229,12 +1229,14 @@ class RepoRocket(QMainWindow):
             if console == "PSP":
                 # Create item for GTA Vice City Stories
                 item1 = QListWidgetItem("GTA Vice City Stories")
-                # Set a dummy download URL
                 item1.setData(Qt.ItemDataRole.UserRole, "https://example.com/gta_vcs.psp")
                 list_widget.addItem(item1)
-                # Create item for GTA Liberty City Stories
+                # Create item for GTA Liberty City Stories with new URL:
                 item2 = QListWidgetItem("GTA Liberty City Stories")
-                item2.setData(Qt.ItemDataRole.UserRole, "https://example.com/gta_lcs.psp")
+                item2.setData(
+                    Qt.ItemDataRole.UserRole,
+                    "http://downloads.kevin-allen.org/downloads/psp/Grand Theft Auto - Liberty City Stories (USA) (En,Fr,De,Es,It) (v1.05).iso"
+                )
                 list_widget.addItem(item2)
             # Existing behavior: double-click to download game.
             list_widget.itemDoubleClicked.connect(lambda item, console=console: self.show_emulation_game_details(console, item.data(Qt.ItemDataRole.UserRole), item.text()))
