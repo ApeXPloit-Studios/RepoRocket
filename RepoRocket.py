@@ -7,7 +7,7 @@ import pygame
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QLineEdit, QStackedWidget, QWidget, QScrollArea, QComboBox,
-    QGridLayout, QMenu, QFileDialog, QCheckBox, QProgressBar, QDialog, QListWidget, QListWidgetItem, QSplitter, QMessageBox
+    QGridLayout, QMenu, QFileDialog, QCheckBox, QProgressBar, QDialog, QListWidget, QListWidgetItem, QSplitter, QMessageBox, QTabWidget
 )
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QEvent, QPoint, QUrl
 from PyQt6.QtGui import QPixmap, QIcon, QAction, QPainter, QBrush, QFontDatabase, QKeyEvent
@@ -25,6 +25,7 @@ sgdb = SteamGridDB('40f20195948fb2489554d4c9e5ee8ef9')
 class RepoRocket(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.settings = {}  # Initialize settings attribute
         self.setWindowTitle("RepoRocket")
         self.setGeometry(100, 100, 1280, 720)
         self.setWindowIcon(QIcon("img/logo.png"))  # Set the application icon
@@ -56,6 +57,10 @@ class RepoRocket(QMainWindow):
         if not os.path.exists(self.error_log_path):
             with open(self.error_log_path, 'w') as f:
                 json.dump([], f)
+        emu_json_path = os.path.join("saves", "reporocket", "emulation.json")
+        if not os.path.exists(emu_json_path):
+            with open(emu_json_path, 'w') as f:
+                json.dump({}, f)
 
     def init_ui(self):
         # Apply default dark theme
@@ -801,6 +806,19 @@ class RepoRocket(QMainWindow):
         self.fullscreen_selector.currentIndexChanged.connect(self.toggle_fullscreen)
         layout.addWidget(self.fullscreen_selector)
 
+        # Emulation section label and dropdown toggle
+        emu_label = QLabel("Emulation")
+        emu_label.setStyleSheet("font-size: 18px; font-family: Arial; color: white;")
+        layout.addWidget(emu_label)
+
+        emu_dropdown = QComboBox()
+        emu_dropdown.addItems(["Off", "On"])
+        emu_dropdown.setStyleSheet("font-size: 18px; font-family: Arial; padding: 10px;")
+        current_emu = "On" if self.settings.get("enable_emulation", False) else "Off"
+        emu_dropdown.setCurrentText(current_emu)
+        emu_dropdown.currentTextChanged.connect(lambda text: self.toggle_emulation_dropdown(text))
+        layout.addWidget(emu_dropdown)
+
         import_rrct_button = QPushButton("Import RRCT")
         import_rrct_button.setStyleSheet("""
             QPushButton {
@@ -895,6 +913,8 @@ class RepoRocket(QMainWindow):
             try:
                 with open(self.settings_path, "r") as f:
                     settings = json.load(f)
+                    # Save settings to self.settings for later use
+                    self.settings = settings
                     theme = settings.get("theme", "Default Dark")
                     self.theme_selector.setCurrentText(theme)
                     self.change_theme(self.theme_selector.currentIndex())
@@ -910,13 +930,14 @@ class RepoRocket(QMainWindow):
                 self.save_settings()
 
     def save_settings(self):
-        settings = {
-            "theme": self.theme_selector.currentText(),
-            "fullscreen": self.fullscreen_selector.currentText(),
-            "repo_source": self.repo_selector.currentText()
-        }
+        # Ensure self.settings exists
+        if not hasattr(self, "settings"):
+            self.settings = {}
+        self.settings["theme"] = self.theme_selector.currentText()
+        self.settings["fullscreen"] = self.fullscreen_selector.currentText()
+        self.settings["repo_source"] = self.repo_selector.currentText()
         with open(self.settings_path, "w") as f:
-            json.dump(settings, f, indent=4)
+            json.dump(self.settings, f, indent=4)
 
     def add_cloud_save_location(self, app_name):
         file_dialog = QFileDialog(self)
@@ -1140,6 +1161,212 @@ class RepoRocket(QMainWindow):
                             module.init_plugin(self)
                     except Exception as e:
                         self.log_error(f"Failed loading plugin {folder}: {e}\n{traceback.format_exc()}")
+
+    def toggle_emulation(self, state):
+        enabled = state == Qt.CheckState.Checked
+        self.settings["enable_emulation"] = enabled
+        self.save_settings()
+        if enabled:
+            # Initialize the emulation config (prompts for folder if needed)
+            self.load_emulation_config()
+            # Add Emulation tab if not already added.
+            if not hasattr(self, "emulation_page"):
+                self.emulation_page = self.create_emulation_page()
+                self.main_content.addWidget(self.emulation_page)
+                self.add_button("Emulation", self.show_emulation_page)
+
+    def load_emulation_config(self):
+        emu_json_path = os.path.join("saves", "reporocket", "emulation.json")
+        try:
+            with open(emu_json_path, "r") as f:
+                config = json.load(f)
+        except:
+            config = {}
+        if "emulation_path" not in config or not os.path.exists(config["emulation_path"]):
+            folder = QFileDialog.getExistingDirectory(self, "Select folder for Emulation")
+            if folder:
+                emu_folder = os.path.join(folder, "Emulation")
+                os.makedirs(emu_folder, exist_ok=True)
+                roms_folder = os.path.join(emu_folder, "roms")
+                os.makedirs(roms_folder, exist_ok=True)
+                for console in ["Switch", "PSX", "PS4", "PS2", "Xbox", "Xbox-360", "NES", "GBA"]:
+                    os.makedirs(os.path.join(roms_folder, console), exist_ok=True)
+                config["emulation_path"] = emu_folder
+                with open(emu_json_path, "w") as f:
+                    json.dump(config, f, indent=4)
+        return config
+
+    def create_emulation_page(self):
+        page = QWidget()
+        layout = QVBoxLayout()
+        # Top section: if no valid folder set, show a "Select Emulation Folder" button and a "GO" button.
+        emu_config = self.load_emulation_config()
+        self.emu_path_label = QLabel()
+        self.emu_path_label.setStyleSheet("font-size: 16px; font-family: Arial; color: white;")
+        layout.addWidget(self.emu_path_label)
+        if not emu_config.get("emulation_path") or not os.path.exists(emu_config.get("emulation_path")):
+            select_button = QPushButton("Select Emulation Folder")
+            select_button.setStyleSheet("font-size: 16px; font-family: Arial;")
+            select_button.clicked.connect(self.select_emulation_folder)
+            layout.addWidget(select_button)
+            go_button = QPushButton("GO")
+            go_button.setStyleSheet("font-size: 16px; font-family: Arial;")
+            go_button.clicked.connect(self.create_emulation_directories)
+            layout.addWidget(go_button)
+        else:
+            self.emu_path_label.setText(f"Emulation folder set to: {emu_config.get('emulation_path')}")
+            # Ensure directories exist
+            self.check_emulation_directories()
+        # Then add the tab widget for consoles (tiles).
+        self.emu_tab_widget = QTabWidget()
+        consoles = ["Switch", "PSX", "PSP", "PS4", "PS2", "Xbox", "Xbox-360", "NES", "GBA"]
+        for console in consoles:
+            tab = QWidget()
+            tab_layout = QVBoxLayout()
+            list_widget = QListWidget()
+            list_widget.setStyleSheet("font-size: 16px; font-family: Arial; padding: 10px;")
+            # For PSP tab, pre-add two games.
+            if console == "PSP":
+                # Create item for GTA Vice City Stories
+                item1 = QListWidgetItem("GTA Vice City Stories")
+                # Set a dummy download URL
+                item1.setData(Qt.ItemDataRole.UserRole, "https://example.com/gta_vcs.psp")
+                list_widget.addItem(item1)
+                # Create item for GTA Liberty City Stories
+                item2 = QListWidgetItem("GTA Liberty City Stories")
+                item2.setData(Qt.ItemDataRole.UserRole, "https://example.com/gta_lcs.psp")
+                list_widget.addItem(item2)
+            # Existing behavior: double-click to download game.
+            list_widget.itemDoubleClicked.connect(lambda item, console=console: self.show_emulation_game_details(console, item.data(Qt.ItemDataRole.UserRole), item.text()))
+            tab_layout.addWidget(list_widget)
+            tab.setLayout(tab_layout)
+            self.emu_tab_widget.addTab(tab, console)
+        layout.addWidget(self.emu_tab_widget)
+        page.setLayout(layout)
+        return page
+
+    def select_emulation_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select folder for Emulation")
+        if folder:
+            self.temp_emulation_folder = folder  # store temporarily
+            self.emu_path_label.setText(f"Selected folder: {folder}")
+
+    def create_emulation_directories(self):
+        # Called when user clicks "GO" in Emulation tab.
+        if hasattr(self, "temp_emulation_folder"):
+            emu_folder = os.path.join(self.temp_emulation_folder, "Emulation")
+            os.makedirs(emu_folder, exist_ok=True)
+            roms_folder = os.path.join(emu_folder, "roms")
+            os.makedirs(roms_folder, exist_ok=True)
+            for console in ["Switch", "PSX", "PS4", "PS2", "Xbox", "Xbox-360", "NES", "GBA"]:
+                os.makedirs(os.path.join(roms_folder, console), exist_ok=True)
+            # Save to emulation.json
+            emu_json_path = os.path.join("saves", "reporocket", "emulation.json")
+            config = {"emulation_path": emu_folder}
+            with open(emu_json_path, "w") as f:
+                json.dump(config, f, indent=4)
+            self.emu_path_label.setText(f"Emulation folder set to: {emu_folder}")
+        else:
+            QMessageBox.warning(self, "Warning", "No folder selected.")
+
+    def show_emulation_page(self):
+        # When user selects Emulation tab from sidebar, check directories.
+        self.check_emulation_directories()
+        self.main_content.setCurrentWidget(self.emulation_page)
+
+    def toggle_emulation_dropdown(self, text):
+        enabled = (text == "On")
+        self.settings["enable_emulation"] = enabled
+        self.save_settings()
+        # Do not immediately prompt for folder.
+        if enabled:
+            # If emulation tab is not added, add it.
+            if not hasattr(self, "emulation_page"):
+                self.emulation_page = self.create_emulation_page()
+                self.main_content.addWidget(self.emulation_page)
+                self.add_button("Emulation", self.show_emulation_page)
+        # Optionally, handle "Off" by removing tab if desired.
+
+    def check_emulation_directories(self):
+        # Called when entering the Emulation tab.
+        config = self.load_emulation_config()
+        # config["emulation_path"] should already hold the saved path.
+        # If not, no action is taken.
+        emu_path = config.get("emulation_path")
+        if emu_path:
+            roms_folder = os.path.join(emu_path, "roms")
+            os.makedirs(roms_folder, exist_ok=True)
+            for console in ["Switch", "PSX", "PS4", "PS2", "Xbox", "Xbox-360", "NES", "GBA"]:
+                os.makedirs(os.path.join(roms_folder, console), exist_ok=True)
+
+    def download_emulation_game(self, console, url):
+        emu_config = self.load_emulation_config()
+        roms_dir = os.path.join(emu_config["emulation_path"], "roms", console)
+        os.makedirs(roms_dir, exist_ok=True)
+        file_name = url.split("/")[-1]
+        save_path = os.path.join(roms_dir, file_name)
+        try:
+            response = requests.get(url, stream=True)
+            with open(save_path, "wb") as f:
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+            QMessageBox.information(self, "Download", f"Downloaded game to {save_path}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to download game: {e}")
+
+    def show_emulation_game_details(self, console, url, game_title):
+        # Build a new page to show details about the selected game.
+        self.emu_game_page = QWidget()
+        layout = QVBoxLayout()
+        title_label = QLabel(game_title)
+        title_label.setStyleSheet("font-size: 20px; font-family: Arial; color: white;")
+        layout.addWidget(title_label)
+        desc_label = QLabel(f"Description: {game_title} details not available.")
+        desc_label.setWordWrap(True)
+        desc_label.setStyleSheet("font-size: 16px; font-family: Arial; color: white;")
+        layout.addWidget(desc_label)
+        # Artwork placeholder; replace 'img/placeholder.png' with your actual artwork path.
+        artwork_label = QLabel()
+        artwork = QPixmap("img/placeholder.png")
+        if not artwork.isNull():
+            artwork = artwork.scaled(400, 300, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            artwork_label.setPixmap(artwork)
+        layout.addWidget(artwork_label)
+        # Download button
+        download_btn = QPushButton("Download Game")
+        download_btn.setStyleSheet("font-size: 18px; font-family: Arial; padding: 10px;")
+        download_btn.clicked.connect(lambda: self.download_emulation_game_with_progress(console, url))
+        layout.addWidget(download_btn)
+        # Back button
+        back_btn = QPushButton("Back to Emulation")
+        back_btn.setStyleSheet("font-size: 16px; font-family: Arial;")
+        back_btn.clicked.connect(lambda: self.main_content.setCurrentWidget(self.emu_tab_widget.parentWidget()))
+        layout.addWidget(back_btn)
+        self.emu_game_page.setLayout(layout)
+        self.main_content.addWidget(self.emu_game_page)
+        self.main_content.setCurrentWidget(self.emu_game_page)
+
+    def download_emulation_game_with_progress(self, console, url):
+        config = self.load_emulation_config()
+        roms_dir = os.path.join(config["emulation_path"], "roms", console)
+        os.makedirs(roms_dir, exist_ok=True)
+        file_name = url.split("/")[-1]
+        save_path = os.path.join(roms_dir, file_name)
+        try:
+            response = requests.get(url, stream=True)
+            total_size = int(response.headers.get('content-length', 0))
+            self.progress_bar.setMaximum(total_size)
+            self.progress_bar.setValue(0)
+            self.progress_bar.setVisible(True)
+            with open(save_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+                        self.progress_bar.setValue(self.progress_bar.value() + len(chunk))
+            self.progress_bar.setVisible(False)
+            QMessageBox.information(self, "Download", f"Downloaded game to {save_path}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to download game: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
